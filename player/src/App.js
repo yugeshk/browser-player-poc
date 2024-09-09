@@ -3,13 +3,15 @@ import React, { useState, useEffect, useRef } from 'react';
 function App() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
   const audioRef = useRef(null);
   const videoRef = useRef(null);
+  const youtubeRef = useRef(null);
 
   useEffect(() => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Daylight / Bad Blood',
+        title: 'Daylight / Bad Blood / Shake It Off',
         artist: 'Taylor Swift',
         album: 'Lover / 1989',
         artwork: [
@@ -17,23 +19,22 @@ function App() {
         ]
       });
 
-      navigator.mediaSession.setActionHandler('play', () => {
-        if (isAudioPlaying) {
-          audioRef.current.play();
-        } else if (isVideoPlaying) {
-          videoRef.current.play();
-        }
-      });
-
-      navigator.mediaSession.setActionHandler('pause', () => {
-        if (isAudioPlaying) {
-          audioRef.current.pause();
-        } else if (isVideoPlaying) {
-          videoRef.current.pause();
-        }
-      });
+      navigator.mediaSession.setActionHandler('play', handlePlay);
+      navigator.mediaSession.setActionHandler('pause', handlePause);
     }
-  }, [isAudioPlaying, isVideoPlaying]);
+  }, [isAudioPlaying, isVideoPlaying, isYouTubePlaying]);
+
+  const handlePlay = () => {
+    if (isAudioPlaying) audioRef.current.play();
+    else if (isVideoPlaying) videoRef.current.play();
+    else if (isYouTubePlaying) youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+  };
+
+  const handlePause = () => {
+    if (isAudioPlaying) audioRef.current.pause();
+    else if (isVideoPlaying) videoRef.current.pause();
+    else if (isYouTubePlaying) youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+  };
 
   const toggleAudio = () => {
     if (isAudioPlaying) {
@@ -43,6 +44,10 @@ function App() {
       if (isVideoPlaying) {
         videoRef.current.pause();
         setIsVideoPlaying(false);
+      }
+      if (isYouTubePlaying) {
+        youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        setIsYouTubePlaying(false);
       }
     }
     setIsAudioPlaying(!isAudioPlaying);
@@ -57,8 +62,29 @@ function App() {
         audioRef.current.pause();
         setIsAudioPlaying(false);
       }
+      if (isYouTubePlaying) {
+        youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        setIsYouTubePlaying(false);
+      }
     }
     setIsVideoPlaying(!isVideoPlaying);
+  };
+
+  const toggleYouTube = () => {
+    if (isYouTubePlaying) {
+      youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    } else {
+      youtubeRef.current.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+      if (isAudioPlaying) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+      }
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+        setIsVideoPlaying(false);
+      }
+    }
+    setIsYouTubePlaying(!isYouTubePlaying);
   };
 
   return (
@@ -82,6 +108,22 @@ function App() {
       <button onClick={toggleVideo}>
         {isVideoPlaying ? 'Pause Video' : 'Play Video'}
       </button>
+
+      <div style={{ width: '100%', maxWidth: '500px', display: 'block', marginTop: '20px' }}>
+        <iframe
+          ref={youtubeRef}
+          width="500"
+          height="280"
+          src="https://www.youtube.com/embed/SRXH9AbT280?enablejsapi=1"
+          title="YouTube video player"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        ></iframe>
+        <button onClick={toggleYouTube}>
+          {isYouTubePlaying ? 'Pause YouTube' : 'Play YouTube'}
+        </button>
+      </div>
     </div>
   );
 }
